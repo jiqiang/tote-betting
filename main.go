@@ -170,12 +170,6 @@ func main() {
 		line, _ := reader.ReadString('\n')
 		line = purify(line)
 
-		// quit program if user enters "quit"
-		if strings.Compare("quit", line) == 0 {
-			fmt.Println("See you!")
-			break
-		}
-
 		// validate input to match designed format
 		if !validInput(line) {
 			fmt.Printf("Invalid input, ignore %s\n", line)
