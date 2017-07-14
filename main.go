@@ -14,32 +14,37 @@ const (
 	winPoolCommission    = 0.15
 	placePoolCommission  = 0.12
 	exactaPoolCommission = 0.18
+
+	winWagerRegExp    = `^bet:[w|p]:\d+:\d+(\.\d+)?$`
+	exactaWagerRegExp = `^bet:e:\d+\,\d+:\d+(\.\d+)?$`
+	resultRegExp      = `^result:\d+:\d+:\d+$`
 )
 
 var winPool = make(map[string]float64)
 var placePool = make(map[string]float64)
 var exactaPool = make(map[string]float64)
 
-// validateInput returns true if input line format matches to designed format.
+// valid returns true if input line format matches to designed format.
 // Otherwise returns false
-func validInput(line string) bool {
-	var validWinAndPlace = regexp.MustCompile(`^bet:[w|p]:\d+:\d+(\.\d+)?$`)
-	var validExacta = regexp.MustCompile(`^bet:e:\d+\,\d+:\d+(\.\d+)?$`)
-	var validResult = regexp.MustCompile(`^result:\d+:\d+:\d+$`)
-
+func valid(line string) bool {
 	if strings.HasPrefix(line, "bet:w") || strings.HasPrefix(line, "bet:p") {
-		return validWinAndPlace.MatchString(line)
+		return validWager(line, winWagerRegExp)
 	}
 
 	if strings.HasPrefix(line, "bet:e") {
-		return validExacta.MatchString(line)
+		return validWager(line, exactaWagerRegExp)
 	}
 
 	if strings.HasPrefix(line, "result") {
-		return validResult.MatchString(line)
+		return validWager(line, resultRegExp)
 	}
 
 	return false
+}
+
+func validWager(line string, wagerFormat string) bool {
+	var format = regexp.MustCompile(wagerFormat)
+	return format.MatchString(line)
 }
 
 // purify removes whitespace, newline, tabs, converts string to lowercase.
@@ -164,16 +169,16 @@ func getDividends(amount float64, stake float64) float64 {
 
 func main() {
 
-	reader := bufio.NewReader(os.Stdin)
+	scanner := bufio.NewScanner(os.Stdin)
 
-	for {
-		line, _ := reader.ReadString('\n')
+	for scanner.Scan() {
+		line := scanner.Text()
 		line = purify(line)
 
 		// validate input to match designed format
-		if !validInput(line) {
-			fmt.Printf("Invalid input, ignore %s\n", line)
-			break
+		if !valid(line) {
+			fmt.Printf("Invalid input: [%s]\n", line)
+			continue
 		}
 
 		if strings.HasPrefix(line, "result") {
