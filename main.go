@@ -42,12 +42,18 @@ func valid(line string) bool {
 	return false
 }
 
+// validWager checks if given line matches given format
 func validWager(line string, wagerFormat string) bool {
 	var format = regexp.MustCompile(wagerFormat)
 	return format.MatchString(line)
 }
 
-// purify removes whitespace, newline, tabs, converts string to lowercase.
+// isResultLine returns true if line starting with "result"
+func isResultLine(line string) bool {
+	return strings.HasPrefix(line, "result")
+}
+
+// purify removes whitespace, newline, tabs and converts string to lowercase.
 func purify(inStr string) string {
 	var outStr string
 	for _, c := range inStr {
@@ -59,8 +65,8 @@ func purify(inStr string) string {
 	return outStr
 }
 
-// processBet parses input line and proccess it
-func processBet(line string) {
+// parse parses input line and proccess it
+func parse(line string) {
 	parts := strings.Split(line, ":")
 	product := parts[1]
 	selections := parts[2]
@@ -92,6 +98,7 @@ func round(f, nearest float64) float64 {
 	return float64(int64(f/nearest+0.5)) * nearest
 }
 
+// getSum gets sum of values from a map
 func getSum(pool map[string]float64) float64 {
 	var sum float64
 	sum = 0
@@ -101,23 +108,25 @@ func getSum(pool map[string]float64) float64 {
 	return sum
 }
 
-func printResult(line string) {
+// printDividendsResult prints final dividends result
+func printDividendsResult(line string) {
 	parts := strings.Split(line, ":")
 	first := parts[1]
 	second := parts[2]
 	third := parts[3]
 
-	fmt.Printf("Win:%s:$%.2f\n", first, calculateWinResult(first))
+	fmt.Printf("Win:%s:$%.2f\n", first, calculateWinDividends(first))
 
-	firstResult, secondResult, thirdResult := calculatePlaceResult(first, second, third)
+	firstResult, secondResult, thirdResult := calculatePlaceDividends(first, second, third)
 	fmt.Printf("Place:%s:$%.2f\n", first, firstResult)
 	fmt.Printf("Place:%s:$%.2f\n", second, secondResult)
 	fmt.Printf("Place:%s:$%.2f\n", third, thirdResult)
 
-	fmt.Printf("Exacta:%s,%s:$%.2f\n", first, second, calculateExactaResult(first, second))
+	fmt.Printf("Exacta:%s,%s:$%.2f\n", first, second, calculateExactaDividends(first, second))
 }
 
-func calculateWinResult(first string) float64 {
+// calculateWinDividends returns dividends for Win product
+func calculateWinDividends(first string) float64 {
 	stake, ok := winPool[first]
 	if !ok {
 		return 0
@@ -128,7 +137,8 @@ func calculateWinResult(first string) float64 {
 	return dividends
 }
 
-func calculatePlaceResult(first, second, third string) (float64, float64, float64) {
+// calculatePlaceDividends returns dividends for Place product
+func calculatePlaceDividends(first, second, third string) (float64, float64, float64) {
 	var firstDividends, secondDividends, thirdDividends float64 = 0, 0, 0
 
 	sum := getSum(placePool)
@@ -152,7 +162,8 @@ func calculatePlaceResult(first, second, third string) (float64, float64, float6
 	return firstDividends, secondDividends, thirdDividends
 }
 
-func calculateExactaResult(first string, second string) float64 {
+// calculateExactaDividends returns dividends for Exacta product
+func calculateExactaDividends(first string, second string) float64 {
 	stake, ok := exactaPool[first+","+second]
 	if !ok {
 		return 0
@@ -169,10 +180,12 @@ func getDividends(amount float64, stake float64) float64 {
 
 func main() {
 
+	// read input from stdin
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for scanner.Scan() {
 		line := scanner.Text()
+
 		line = purify(line)
 
 		// validate input to match designed format
@@ -181,11 +194,12 @@ func main() {
 			continue
 		}
 
-		if strings.HasPrefix(line, "result") {
-			printResult(line)
+		// print dividents result and exit
+		if isResultLine(line) {
+			printDividendsResult(line)
 			break
 		}
 
-		processBet(line)
+		parse(line)
 	}
 }
