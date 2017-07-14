@@ -96,7 +96,7 @@ func getSum(pool map[string]float64) float64 {
 	return sum
 }
 
-func getResult(line string) {
+func printResult(line string) {
 	parts := strings.Split(line, ":")
 	first := parts[1]
 	second := parts[2]
@@ -104,46 +104,61 @@ func getResult(line string) {
 
 	fmt.Printf("Win:%s:$%.2f\n", first, calculateWinResult(first))
 
-	for _, value := range calculatePlaceResult(first, second, third) {
-		fmt.Printf("Place:%s:$%.2f\n", first, value)
-	}
+	firstResult, secondResult, thirdResult := calculatePlaceResult(first, second, third)
+	fmt.Printf("Place:%s:$%.2f\n", first, firstResult)
+	fmt.Printf("Place:%s:$%.2f\n", second, secondResult)
+	fmt.Printf("Place:%s:$%.2f\n", third, thirdResult)
 
 	fmt.Printf("Exacta:%s,%s:$%.2f\n", first, second, calculateExactaResult(first, second))
 }
 
 func calculateWinResult(first string) float64 {
-	stake, _ := winPool[first]
+	stake, ok := winPool[first]
+	if !ok {
+		return 0
+	}
 	sum := getSum(winPool)
 	amount := round(sum-sum*winPoolCommission, 0.01)
-	odds := getOdds(amount, stake)
-	return odds
+	dividends := getDividends(amount, stake)
+	return dividends
 }
 
-func calculatePlaceResult(first, second, third string) []float64 {
-	firstStake, _ := placePool[first]
-	secondStake, _ := placePool[second]
-	thirdStake, _ := placePool[third]
+func calculatePlaceResult(first, second, third string) (float64, float64, float64) {
+	var firstDividends, secondDividends, thirdDividends float64 = 0, 0, 0
 
 	sum := getSum(placePool)
 	amount := sum * (1 - placePoolCommission) / 3
 
-	result := make([]float64, 0)
-	result = append(result, getOdds(amount, firstStake))
-	result = append(result, getOdds(amount, secondStake))
-	result = append(result, getOdds(amount, thirdStake))
+	firstStake, firstOk := placePool[first]
+	if firstOk {
+		firstDividends = getDividends(amount, firstStake)
+	}
 
-	return result
+	secondStake, secondOk := placePool[second]
+	if secondOk {
+		secondDividends = getDividends(amount, secondStake)
+	}
+
+	thirdStake, thirdOk := placePool[third]
+	if thirdOk {
+		thirdDividends = getDividends(amount, thirdStake)
+	}
+
+	return firstDividends, secondDividends, thirdDividends
 }
 
 func calculateExactaResult(first string, second string) float64 {
-	stake, _ := exactaPool[first+","+second]
+	stake, ok := exactaPool[first+","+second]
+	if !ok {
+		return 0
+	}
 	sum := getSum(exactaPool)
 	amount := sum * (1 - exactaPoolCommission)
-	odds := getOdds(amount, stake)
-	return odds
+	dividends := getDividends(amount, stake)
+	return dividends
 }
 
-func getOdds(amount float64, stake float64) float64 {
+func getDividends(amount float64, stake float64) float64 {
 	return round(amount/stake, 0.01)
 }
 
@@ -164,12 +179,11 @@ func main() {
 		// validate input to match designed format
 		if !validInput(line) {
 			fmt.Printf("Invalid input, ignore %s\n", line)
-			continue
+			break
 		}
 
 		if strings.HasPrefix(line, "result") {
-			// do calculation
-			getResult(line)
+			printResult(line)
 			break
 		}
 
