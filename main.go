@@ -180,26 +180,44 @@ func getDividends(amount float64, stake float64) float64 {
 
 func main() {
 
-	// read input from stdin
-	scanner := bufio.NewScanner(os.Stdin)
+	wagersChan := make(chan string)
+	resultChan := make(chan string)
 
-	for scanner.Scan() {
-		line := scanner.Text()
+	// starts a goroutine to accept user input so main
+	// process isn't blocked
+	go func() {
+		// read input from stdin
+		scanner := bufio.NewScanner(os.Stdin)
 
-		line = purify(line)
+		for scanner.Scan() {
+			line := scanner.Text()
 
-		// validate input to match designed format
-		if !valid(line) {
-			fmt.Printf("Invalid input: [%s]\n", line)
-			continue
+			line = purify(line)
+
+			wagersChan <- line
 		}
+	}()
 
-		// print dividents result and exit
-		if isResultLine(line) {
-			printDividendsResult(line)
-			break
+	// starts another goroutine to process user input until it
+	// meets result line
+	go func() {
+		for {
+			line := <-wagersChan
+			// validate input to match designed format
+			if !valid(line) {
+				fmt.Printf("Invalid input: [%s]\n", line)
+				continue
+			}
+
+			// print dividents result and exit
+			if isResultLine(line) {
+				resultChan <- line
+			} else {
+				parse(line)
+			}
 		}
+	}()
 
-		parse(line)
-	}
+	// main process calculate 3 products dividends and print them out
+	printDividendsResult(<-resultChan)
 }
